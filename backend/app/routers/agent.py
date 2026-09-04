@@ -37,10 +37,14 @@ def _provider():
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest, db: Session = Depends(get_db)):
-    
+def chat(
+    payload: ChatRequest, 
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+    ):   
+
     try:
-        user_id = get_current_user_id(db)
+       
 
         usage_service.consume_session(db, user_id)
 
@@ -68,9 +72,13 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)):
         )
 
 @router.post("/recommend", response_model=list[RecommendationOut])
-def recommend(payload: RecommendRequest, db: Session = Depends(get_db)):
+def recommend(
+    payload: RecommendRequest, 
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
     """Smart Cart Optimizer suggestions (read-only, no usage consumed)."""
-    user_id = get_current_user_id(db)
+    
     if payload.product_id:
         recs = recommendation_service.recommend_for_product(db, payload.product_id)
     else:
@@ -78,9 +86,18 @@ def recommend(payload: RecommendRequest, db: Session = Depends(get_db)):
         recs = recommendation_service.recommend_for_cart(db, cart)
     return [RecommendationOut(**r) for r in recs]
 
-
 @router.post("/bundle", response_model=BundleOut)
-def bundle(payload: BundleRequest, db: Session = Depends(get_db)):
+def bundle(
+    payload: BundleRequest,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
     """Rebuild/modify a bundle (e.g. Make It Cheaper). No usage consumed."""
-    b = bundle_service.build_bundle(db, goal=payload.goal, budget=payload.budget)
+    b = bundle_service.build_bundle(
+        db,
+        goal=payload.goal,
+        budget=payload.budget,
+    )
     return BundleOut(**b)
+
+   

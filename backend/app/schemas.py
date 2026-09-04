@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
+from datetime import datetime
 
 # ---------- Products ----------
 class ProductOut(BaseModel):
@@ -92,11 +93,18 @@ class UsageOut(BaseModel):
     period: str
     reset_period: str
     limit_reached: bool
+    expires_at: Optional[datetime] = None
 
 
 class SubscriptionOut(BaseModel):
+
     plan: str
+
     status: str
+
+    started_at: datetime | None = None
+
+    expires_at: datetime | None = None
 
 
 class UpgradeRequest(BaseModel):
@@ -114,5 +122,39 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_payment_id: str
     razorpay_order_id: str
     razorpay_signature: str
-    
+
 ChatResponse.model_rebuild()
+
+"""Authentication helpers for Cartiva."""
+
+from pwdlib import PasswordHash
+
+
+password_hash = PasswordHash.recommended()
+
+
+def hash_password(password: str) -> str:
+    """Create a secure password hash."""
+    return password_hash.hash(password)
+
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    """Verify a password against its stored hash."""
+    return password_hash.verify(password, hashed_password)
+
+class SignupRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    message: str
+    user_id: int
+    name: str
+    email: str

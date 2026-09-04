@@ -14,6 +14,7 @@ from typing import Optional
 
 from huggingface_hub import InferenceClient
 
+
 @dataclass
 class ToolSpec:
     """Describes a callable tool exposed to the LLM."""
@@ -80,8 +81,8 @@ class HuggingFaceProvider(LLMProvider):
 
         response = self.client.chat_completion(
             messages=hf_messages,
-            max_tokens=300,
-            temperature=0.7,
+            max_tokens=120,
+            temperature=0.1,
         )
 
         content = response.choices[0].message.content or ""

@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import agent, cart, products, usage, subscription
+from app.routers import agent, auth, cart, products, subscription, usage
 from app.services.errors import CartivaError
 
 logger = logging.getLogger("cartiva")
@@ -42,11 +42,12 @@ async def cartiva_error_handler(_: Request, exc: CartivaError):
 
 @app.exception_handler(Exception)
 async def unhandled_error_handler(_: Request, exc: Exception):
+    logger.exception("Unhandled Cartiva error")
+
     return JSONResponse(
         status_code=500,
         content={
-            "error_type": type(exc).__name__,
-            "error": str(exc),
+            "detail": "something went wrong. please try agsin."
         },
     )
 
@@ -61,3 +62,4 @@ app.include_router(cart.router)
 app.include_router(agent.router)
 app.include_router(usage.router)
 app.include_router(subscription.router)
+app.include_router(auth.router)

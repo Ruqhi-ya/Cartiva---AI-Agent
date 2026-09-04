@@ -31,13 +31,21 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(120))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    # Stores the hashed password, never the actual password
+    password_hash: Mapped[str] = mapped_column(String(255))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_now,
+    )
 
     carts: Mapped[list["Cart"]] = relationship(back_populates="user")
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
     usage_records: Mapped[list["UsageRecord"]] = relationship(back_populates="user")
     subscription: Mapped["Subscription"] = relationship(
-        back_populates="user", uselist=False
+        back_populates="user",
+        uselist=False,
     )
 
 
@@ -129,14 +137,53 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
-    plan: Mapped[str] = mapped_column(String(20), default="free")  # free | plus
-    status: Mapped[str] = mapped_column(String(20), default="active")
-    # Placeholder fields for future Razorpay integration
-    provider: Mapped[str] = mapped_column(String(40), default="")
-    provider_subscription_id: Mapped[str] = mapped_column(String(120), default="")
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, onupdate=_now
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        unique=True,
+        index=True,
     )
 
-    user: Mapped["User"] = relationship(back_populates="subscription")
+    # free | plus
+    plan: Mapped[str] = mapped_column(
+        String(20),
+        default="free",
+    )
+
+    # active | pending | cancelled | expired | payment_failed
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="active",
+    )
+
+    # Razorpay information
+    provider: Mapped[str] = mapped_column(
+        String(40),
+        default="",
+    )
+
+    provider_subscription_id: Mapped[str] = mapped_column(
+        String(120),
+        default="",
+    )
+
+    # Subscription lifecycle
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_now,
+        onupdate=_now,
+    )
+
+    user: Mapped["User"] = relationship(
+        back_populates="subscription"
+    )

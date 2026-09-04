@@ -62,6 +62,9 @@ def _clean_search_query(text: str) -> str:
         "find me",
         "find",
         "get me",
+        "add to cart",
+        "add this to cart",
+        "add",
         "get",
         "give me",
         "give",
@@ -100,6 +103,7 @@ def _clean_search_query(text: str) -> str:
         "product",
         "items",
         "item",
+        "cart",
     }
 
     words = query.split()
@@ -141,6 +145,8 @@ def _normalize_category(category: Optional[str]) -> Optional[str]:
         "t shirts": "tshirts",
         "t-shirt": "tshirts",
         "t-shirts": "tshirts",
+        "skin care": "skincare",
+        "skin care products": "skincare",
     }
 
     return replacements.get(category, category)
@@ -177,7 +183,7 @@ class CartivaAgent:
 
                         "shopping_intent must be one of: "
                         "get_cart, cart_total, bundle, cart_recommend, "
-                        "make_cheaper, search. "
+                        "make_cheaper, add_to_cart, search. "
 
                         "Use 'get_cart' when the customer asks to see, view, "
                         "check, or inspect their cart contents. "
@@ -192,9 +198,12 @@ class CartivaAgent:
                         "Use 'make_cheaper' when the customer wants to reduce "
                         "the price of an existing bundle or shopping selection. "
 
-                        "Use 'bundle' only when the customer explicitly wants "
+                        "Use 'bundle' when the customer explicitly wants "
                         "a kit, bundle, collection, routine, set, or multiple "
                         "complementary products. "
+
+                        "Use 'add_to_cart' when the customer explicitly asks "
+                        "to add a specific product to their cart. "
 
                         "Use 'search' when the customer wants to find, see, "
                         "show, browse, or get products, even when they specify "
@@ -202,8 +211,12 @@ class CartivaAgent:
 
                         "For product searches, category should contain the "
                         "actual catalog category when you are confident. "
+
                         "If the customer names a specific product or brand, "
-                        "put that useful product wording in category or goal. "
+                        "put the useful product wording in category or goal. "
+
+                        "For add_to_cart, put the specific product wording "
+                        "in category or goal so it can be searched. "
 
                         "budget must be a number or null. "
 
@@ -239,12 +252,24 @@ class CartivaAgent:
 
         t = text.lower()
 
+        # Explicit add-to-cart request must be checked first.
+        if (
+            "add to cart" in t
+            or "add this to cart" in t
+            or "put it in my cart" in t
+            or "put this in my cart" in t
+        ):
+            return "add_to_cart"
+
+        # Bundle/routine requests.
         if any(
             k in t
             for k in [
                 "bundle",
                 "kit",
                 "build me",
+                "build a",
+                "build an",
                 "routine",
                 "set up",
                 "starter",
@@ -421,15 +446,42 @@ class CartivaAgent:
             "bundle",
             "cart_recommend",
             "make_cheaper",
+            "add_to_cart",
             "search",
         }
+
+        # -----------------------------------------------------
+        # IMPORTANT INTENT FALLBACK
+        # -----------------------------------------------------
+        #
+        # Qwen can sometimes classify an obvious bundle request
+        # such as "Build me a skincare routine under ₹2,000"
+        # as a normal "search".
+        #
+        # The deterministic detector is more reliable for explicit
+        # phrases such as "build me", "routine", "kit", and "bundle".
+        #
+        # Therefore:
+        # - invalid Qwen intent -> use fallback
+        # - Qwen says "search" but fallback sees a stronger intent
+        #   -> use the fallback intent
+        #
+
+        fallback_intent = self._detect_intent(message)
 
         if intent not in valid_intents:
             print(
                 "DEBUG: Invalid intent from Qwen:",
                 intent,
             )
-            intent = self._detect_intent(message)
+            intent = fallback_intent
+
+        elif intent == "search" and fallback_intent != "search":
+            print(
+                "DEBUG: Qwen returned search, but fallback detected:",
+                fallback_intent,
+            )
+            intent = fallback_intent
 
         print("DEBUG: Final intent:", intent)
 
@@ -563,6 +615,76 @@ class CartivaAgent:
                     "nothing is added without your approval."
                 ),
                 intent="cart_recommend",
+                recommendations=recs,
+                bundle=None,
+            )
+
+        # -----------------------------------------------------
+        # ADD TO CART
+        # -----------------------------------------------------
+
+        if intent == "add_to_cart":
+
+            category = request.get("category")
+            goal = request.get("goal")
+
+            # Prefer the specific product wording returned by Qwen.
+            search_message = goal or category or message
+
+            result = self._search_products(
+                message=search_message,
+                category=category,
+                budget=None,
+            )
+
+            products = result.get("products", [])
+
+            if not products:
+
+                # Final fallback using the original message.
+                result = self._search_products(
+                    message=message,
+                    category=None,
+                    budget=None,
+                )
+
+                products = result.get("products", [])
+
+            if not products:
+
+                return AgentResult(
+                    reply=(
+                        "I couldn't find that product. "
+                        "Try using the product name."
+                    ),
+                    intent="add_to_cart",
+                    recommendations=[],
+                    bundle=None,
+                )
+
+            from app.services.product_service import get_product
+
+            recs = [
+                {
+                    "product": get_product(
+                        self.db,
+                        p["id"],
+                    ),
+                    "reason": (
+                        "I found the product you asked to add. "
+                        "Click Add to Cart to approve it."
+                    ),
+                    "kind": "add_to_cart",
+                }
+                for p in products[:1]
+            ]
+
+            return AgentResult(
+                reply=(
+                    "I found the product you requested. "
+                    "Click Add to Cart to approve adding it."
+                ),
+                intent="add_to_cart",
                 recommendations=recs,
                 bundle=None,
             )

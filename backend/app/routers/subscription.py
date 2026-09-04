@@ -11,7 +11,6 @@ from app.deps import get_current_user_id
 from app.schemas import (
     CreateOrderOut,
     SubscriptionOut,
-    UpgradeRequest,
     VerifyPaymentRequest,
 )
 from app.services import subscription_service
@@ -24,6 +23,7 @@ router = APIRouter(
 
 
 def _razorpay_client():
+    """Create a Razorpay client using configured credentials."""
     if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
         raise HTTPException(
             status_code=500,
@@ -39,46 +39,29 @@ def _razorpay_client():
 
 
 @router.get("", response_model=SubscriptionOut)
-def get_subscription(db: Session = Depends(get_db)):
-    user_id = get_current_user_id(db)
-
-    subscription = subscription_service.get_or_create_subscription(
-        db,
-        user_id,
-    )
-
-    return SubscriptionOut(
-        plan=subscription.plan,
-        status=subscription.status,
-    )
-
-
-@router.post("/upgrade", response_model=SubscriptionOut)
-def upgrade(
-    payload: UpgradeRequest,
+def get_subscription(
     db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
-    """Legacy/dev endpoint for manually changing the plan."""
-
-    user_id = get_current_user_id(db)
-
-    subscription = subscription_service.set_plan(
+    """Get the current user's Cartiva Plus subscription."""
+    subscription = subscription_service.get_current_subscription(
         db,
         user_id,
-        payload.plan,
     )
 
     return SubscriptionOut(
         plan=subscription.plan,
         status=subscription.status,
+        started_at=subscription.started_at,
+        expires_at=subscription.expires_at,
     )
 
 
 @router.post("/create-order", response_model=CreateOrderOut)
-def create_order(db: Session = Depends(get_db)):
+def create_order(
+    user_id: int = Depends(get_current_user_id),
+):
     """Create a Razorpay Test Mode order for Cartiva Plus."""
-
-    user_id = get_current_user_id(db)
 
     client = _razorpay_client()
 
@@ -94,10 +77,10 @@ def create_order(db: Session = Depends(get_db)):
                 "receipt": f"cartiva_plus_{user_id}",
             }
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
-            detail=f"Unable to create Razorpay order: {str(e)}",
+            detail="Unable to create Razorpay order.",
         )
 
     return CreateOrderOut(
@@ -112,10 +95,9 @@ def create_order(db: Session = Depends(get_db)):
 def verify_payment(
     payload: VerifyPaymentRequest,
     db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
     """Verify Razorpay payment and activate Cartiva Plus."""
-
-    user_id = get_current_user_id(db)
 
     client = _razorpay_client()
 
@@ -143,4 +125,6 @@ def verify_payment(
     return SubscriptionOut(
         plan=subscription.plan,
         status=subscription.status,
+        started_at=subscription.started_at,
+        expires_at=subscription.expires_at,
     )

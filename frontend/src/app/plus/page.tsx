@@ -23,17 +23,14 @@ export default function PlusPage() {
     setError("");
 
     try {
-      // 1. Ask backend to create a Razorpay order.
       const order = await api.createSubscriptionOrder();
 
-      // 2. Make sure Razorpay Checkout is loaded.
       if (!window.Razorpay) {
         throw new ApiError(
           "Payment checkout is still loading. Please try again."
         );
       }
 
-      // 3. Open Razorpay Checkout.
       const options: RazorpayOptions = {
         key: order.key_id,
         amount: order.amount,
@@ -42,12 +39,10 @@ export default function PlusPage() {
         description: "Cartiva Plus - Monthly Subscription",
         order_id: order.order_id,
 
-        // 4. Razorpay calls this after successful payment.
         handler: async (response) => {
           try {
             setNotice("Payment received. Verifying your payment...");
 
-            // 5. Send payment details to our backend.
             const subscription =
               await api.verifySubscriptionPayment({
                 razorpay_payment_id:
@@ -58,7 +53,6 @@ export default function PlusPage() {
                   response.razorpay_signature,
               });
 
-            // 6. Refresh usage/plan information.
             const fresh = await api.usage();
             setUsage(fresh);
             await refreshUsage();
@@ -138,9 +132,17 @@ export default function PlusPage() {
     }
   };
 
+  const expiryDate =
+    usage?.plan === "plus" && usage?.expires_at
+      ? new Date(usage.expires_at).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : null;
+
   return (
     <>
-      {/* Razorpay Checkout script */}
       <Script
         src="https://checkout.razorpay.com/v1/checkout.js"
         strategy="afterInteractive"
@@ -169,6 +171,15 @@ export default function PlusPage() {
                 ? "Cartiva Plus"
                 : "Cartiva Free"}
             </p>
+
+            {plan === "plus" && expiryDate && (
+              <p className="mt-1 text-xs text-muted">
+                Active until{" "}
+                <span className="font-semibold text-ink">
+                  {expiryDate}
+                </span>
+              </p>
+            )}
           </div>
 
           <div className="text-sm text-muted">

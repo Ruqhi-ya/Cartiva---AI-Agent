@@ -1,22 +1,42 @@
-"""Shared dependencies.
+"""Authentication dependencies for Cartiva."""
 
-For the MVP we use a single seeded demo customer. The dependency is isolated
-here so real authentication can be dropped in later without touching routers.
-"""
+from fastapi import Cookie, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.database import get_db
 from app.models import User
+from app.services.auth_token_service import verify_access_token
 
-DEMO_EMAIL = "demo@cartiva.app"
 
+def get_current_user_id(
+    db: Session = Depends(get_db),
+    cartiva_token: str | None = Cookie(default=None),
+) -> int:
+    """Return the authenticated customer's user ID."""
 
-def get_current_user_id(db: Session) -> int:
-    user = db.execute(select(User).where(User.email == DEMO_EMAIL)).scalars().first()
+    if not cartiva_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Please log in to use Cartiva.",
+        )
+
+    user_id = verify_access_token(cartiva_token)
+
+    if user_id is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Your session has expired. Please log in again.",
+        )
+
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalars().first()
+
     if not user:
-        # Auto-provision the demo user if seed hasn't run.
-        user = User(email=DEMO_EMAIL, name="Demo Customer")
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        raise HTTPException(
+            status_code=401,
+            detail="User account not found.",
+        )
+
     return user.id

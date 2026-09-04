@@ -50,11 +50,14 @@ export interface Usage {
   period: string;
   reset_period: string;
   limit_reached: boolean;
+  expires_at: string | null;
 }
 
 export interface Subscription {
   plan: string;
   status: string;
+  started_at: string | null;
+  expires_at: string | null;
 }
 
 export interface ChatResponse {

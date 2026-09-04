@@ -23,10 +23,10 @@ interface Msg {
 }
 
 const SUGGESTIONS = [
-  "I need a beginner gym kit under ₹5,000.",
+  "I need a makeup kit under ₹5,000.",
   "Build me a skincare routine under ₹2,000.",
   "What should I add to my cart?",
-  "Show me travel essentials.",
+  "Show me wallet options.",
 ];
 
 export default function CartivaAIPage() {

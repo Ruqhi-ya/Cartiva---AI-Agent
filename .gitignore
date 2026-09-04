@@ -4,6 +4,8 @@ __pycache__/
 .venv/
 venv/
 *.db
+.pytest_cache/
+.mypy_cache/
 
 # Env / secrets — never commit
 .env

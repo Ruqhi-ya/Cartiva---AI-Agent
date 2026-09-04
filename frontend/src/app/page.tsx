@@ -20,22 +20,32 @@ export default function StorePage() {
 
   const load = useCallback(async (q: string, cat: string | null) => {
     setLoading(true);
+
     try {
       const list = await api.listProducts({
         q: q || undefined,
         category: cat || undefined,
       });
+
       setProducts(list);
       setError("");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Unable to load products.");
+      setError(
+        e instanceof ApiError
+          ? e.message
+          : "Unable to load products."
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    api.categories().then(setCategories).catch(() => setCategories([]));
+    api
+      .categories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
+
     load("", null);
   }, [load]);
 
@@ -51,14 +61,24 @@ export default function StorePage() {
 
   return (
     <div className="space-y-6">
-      {/* Compact header + AI entry point (no huge hero) */}
+
+      {/* Connected Demo Store */}
       <div className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-5 shadow-soft sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-extrabold text-ink">Shop the store</h1>
-          <p className="text-sm text-muted">
-            AI-powered shopping that builds a better cart.
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-line bg-page px-3 py-1 text-xs font-semibold text-muted">
+            <span className="h-2 w-2 rounded-full bg-primary" />
+            Connected Demo Store
+          </div>
+
+          <h1 className="text-xl font-extrabold text-ink">
+            Cartiva Demo Store
+          </h1>
+
+          <p className="mt-1 text-sm text-muted">
+            A reference shopping environment powered by Cartiva AI.
           </p>
         </div>
+
         <Link
           href="/cartiva-ai"
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
@@ -76,6 +96,7 @@ export default function StorePage() {
             placeholder="Search products…"
             className="flex-1 rounded-xl border border-line bg-card px-4 py-2.5 text-sm outline-none focus:border-primary"
           />
+
           <button
             type="submit"
             className="rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white"
@@ -85,7 +106,12 @@ export default function StorePage() {
         </form>
 
         <div className="flex flex-wrap gap-2">
-          <CategoryPill label="All" active={!activeCat} onClick={() => selectCat(null)} />
+          <CategoryPill
+            label="All"
+            active={!activeCat}
+            onClick={() => selectCat(null)}
+          />
+
           {categories.map((c) => (
             <CategoryPill
               key={c}
@@ -99,6 +125,7 @@ export default function StorePage() {
 
       <Banner message={error} />
 
+      {/* Products */}
       {loading ? (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -115,7 +142,11 @@ export default function StorePage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {products.map((p) => (
-            <ProductCard key={p.id} product={p} onAdd={(prod) => addToCart(prod.id)} />
+            <ProductCard
+              key={p.id}
+              product={p}
+              onAdd={(prod) => addToCart(prod.id)}
+            />
           ))}
         </div>
       )}
