@@ -8,7 +8,7 @@ against real relationships rather than hard-coded UI recommendations.
 from sqlalchemy import select
 
 from app.database import Base, SessionLocal, engine
-from app.deps import DEMO_EMAIL
+DEMO_EMAIL = "demo@cartiva.local"
 from app.models import Product, Subscription, User
 
 # (name, description, category, price, image, stock, tags, related_names, is_premium)
