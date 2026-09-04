@@ -36,7 +36,7 @@ export default function CartivaAIPage() {
       id: 0,
       role: "ai",
       text:
-        "Hi, I'm Cartiva AI. Tell me what you're shopping for and I'll build a better cart. Try a goal like “a beginner gym kit under ₹5,000”.",
+        "Hi, I'm Cartiva AI. Tell me what you're shopping for and I'll build a better cart. Try a goal like “a beginner skincare kit under ₹3,000”.",
     },
   ]);
   const [input, setInput] = useState("");
