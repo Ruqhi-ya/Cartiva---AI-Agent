@@ -8,3 +8,4 @@ python-dotenv==1.0.1
 huggingface_hub
 PyJWT
 pwdlib[argon2]
+razorpay
