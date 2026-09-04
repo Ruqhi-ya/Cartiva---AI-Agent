@@ -15,6 +15,7 @@ from app.config import settings
 from app.database import Base, engine
 from app.routers import agent, auth, cart, products, subscription, usage
 from app.services.errors import CartivaError
+from app.seed import run as seed_database 
 
 logger = logging.getLogger("cartiva")
 
@@ -33,7 +34,7 @@ app.add_middleware(
 def _startup():
     # Create tables if they don't exist (simple MVP bootstrap).
     Base.metadata.create_all(bind=engine)
-
+    seed_database()
 
 @app.exception_handler(CartivaError)
 async def cartiva_error_handler(_: Request, exc: CartivaError):
