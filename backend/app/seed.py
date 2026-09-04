@@ -110,7 +110,11 @@ def run():
         # Demo user + subscription
         user = db.execute(select(User).where(User.email == DEMO_EMAIL)).scalars().first()
         if not user:
-            user = User(email=DEMO_EMAIL, name="Demo Customer")
+            user = User(
+                email=DEMO_EMAIL, 
+                name="Demo Customer",
+                password_hash="demo-seed-password",
+        )
             db.add(user)
             db.commit()
             db.refresh(user)
